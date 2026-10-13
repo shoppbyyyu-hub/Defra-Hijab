@@ -39,12 +39,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   return (
     <section data-reveal className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 my-12 md:my-16 lg:my-20">
       {/* Section Heading: "Koleksi Hijab" 24px/22px, weight 500, centered */}
-      <h2 className="text-[22px] md:text-[24px] font-medium text-[#282420] text-center mb-6 tracking-tight">
+      {title && <h2 className="text-[22px] md:text-[24px] font-medium text-[#282420] text-center mb-6 tracking-tight">
         {title}
-      </h2>
+      </h2>}
 
       {/* Clean interactive filter tabs within the catalog */}
-      <div className="flex items-center justify-center gap-6 mb-8 text-sm font-medium border-b border-[#E8E2DC] pb-3">
+      {categories.length > 0 && <div className="flex items-center justify-center gap-6 mb-8 text-sm font-medium border-b border-[#E8E2DC] pb-3">
         <button
           type="button"
           onClick={() => setActiveTab('ALL')}
@@ -64,11 +64,11 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
             ? 'text-[#282420] after:absolute after:bottom-[-13px] after:left-0 after:right-0 after:h-[2px] after:bg-[#282420]'
             : 'text-[#706861] hover:text-[#282420]'}`}
         >{category.name}</button>)}
-      </div>
+      </div>}
 
       {/* Grid: Desktop 4 cols (16px H / 32px V gap), Tablet 3 cols, Mobile 2 cols (12px H / 24px V gap) */}
       <div ref={gridMotionRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 md:gap-x-4 gap-y-6 md:gap-y-8">
-        {filtered.map((prod) => {
+        {filtered.map((prod, index) => {
           const wish = isWishlisted(prod.id);
           const hasDiscount = Boolean(
             prod.discountPrice && prod.discountPrice > 0 && prod.discountPrice < prod.basePrice
@@ -88,7 +88,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                 <img
                   src={prod.imageUrl}
                   alt={prod.name}
-                  loading="lazy"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
                   decoding="async"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
                 />

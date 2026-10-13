@@ -17,7 +17,8 @@ import {
   PackageCheck,
   ZoomIn,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import type { Order } from '../../types/index.ts';
 import {
@@ -47,6 +48,30 @@ export const AdminOrdersTab: React.FC<OrdersTabProps> = ({
   const [filterFulfillment, setFilterFulfillment] = useState<string>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [zoomProofUrl, setZoomProofUrl] = useState<string | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+
+  const downloadInvoice = async (orderNumber: string) => {
+    setInvoiceLoading(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${encodeURIComponent(orderNumber)}/invoice`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        throw new Error(failure.error || 'Invoice gagal dibuat.');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      onShowMessage((error as Error).message || 'Invoice gagal dibuat.');
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
 
   // Rejection / Revision Modal State
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -490,9 +515,17 @@ export const AdminOrdersTab: React.FC<OrdersTabProps> = ({
                 {/* 1. Alamat & Data Pelanggan */}
                 <div className="p-4 bg-[#FAF9F7] border border-[#E9E5DF] rounded-[16px] grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#716B64] block mb-1">
-                      Penerima Pesanan
-                    </span>
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#716B64]">
+                        Penerima Pesanan
+                      </span>
+                      {selectedOrder.paymentStatus === 'VERIFIED' && (
+                        <button type="button" disabled={invoiceLoading} onClick={() => void downloadInvoice(selectedOrder.orderNumber)} className="inline-flex min-h-9 items-center gap-1.5 px-3 border border-[#E9E5DF] rounded-[8px] text-[11px] font-semibold text-[#87533F] disabled:opacity-50">
+                          <Download className="w-3.5 h-3.5" />
+                          {invoiceLoading ? 'Menyiapkan...' : 'Invoice PDF'}
+                        </button>
+                      )}
+                    </div>
                     <p className="font-semibold text-sm text-[#24221F]">{selectedOrder.customerName}</p>
                     <p className="text-[#716B64] text-xs">{selectedOrder.customerEmail}</p>
                     <a

@@ -31,6 +31,14 @@ interface LowStockSnapshot {
   batches: LowStockBatchSnapshot[];
 }
 
+interface ReturnNotificationSnapshot {
+  returnNumber:string; orderNumber:string; customerName:string; customerEmail:string;
+  customerWhatsapp:string; customerBirthDate:string; address:string;
+  items:Array<{productName:string;color:string;size:string;quantity:number;lineTotal:number}>;
+  voucherCode?:string|null; subtotal:number; discount:number; shippingFee:number; total:number;
+  paymentMethod:string; reason:string; resolution:string; notes:string; proofUrls:string[];
+}
+
 function sanitizeError(error: unknown, bot = '') {
   let message = String((error as Error)?.message || error || 'Kesalahan tidak diketahui');
   if (bot) message = message.replaceAll(bot, '[TOKEN DISEMBUNYIKAN]');
@@ -62,6 +70,28 @@ async function lookupLowStockSnapshot(variantId: unknown): Promise<LowStockSnaps
   };
 }
 
+async function lookupReturnSnapshot(returnId:unknown):Promise<ReturnNotificationSnapshot|null>{
+  if(typeof returnId!=='string'||!returnId)return null;
+  const db=getSupabaseAdmin();
+  const {data:r,error}=await db.from('return_requests').select('return_number,requested_resolution,reason_category,customer_notes,orders(order_number,customer_name,customer_email,customer_whatsapp,customer_birth_date,address_line,village,subdistrict,city,province,postal_code,voucher_code,subtotal,discount_amount,shipping_fee,total_amount,payment_method),return_items(quantity,order_items(product_name,color_name,size_name,unit_price)),return_proofs(bucket,storage_path)').eq('id',returnId).maybeSingle();
+  if(error)throw error;
+  if(!r||!r.orders)return null;
+  const order:any=Array.isArray(r.orders)?r.orders[0]:r.orders;
+  const proofUrls=(await Promise.all((r.return_proofs||[]).map(async(proof:any)=>{
+    const {data,error:signedError}=await db.storage.from(proof.bucket||'return-proofs').createSignedUrl(proof.storage_path,3600);
+    return signedError?null:data?.signedUrl||null;
+  }))).filter((url:any):url is string=>Boolean(url));
+  return {returnNumber:r.return_number,orderNumber:order.order_number,customerName:order.customer_name,customerEmail:order.customer_email,customerWhatsapp:order.customer_whatsapp,customerBirthDate:order.customer_birth_date,address:[order.address_line,order.village,order.subdistrict,order.city,order.province,order.postal_code].filter(Boolean).join(', '),items:(r.return_items||[]).map((item:any)=>{const ordered=Array.isArray(item.order_items)?item.order_items[0]:item.order_items;return {productName:ordered?.product_name||'-',color:ordered?.color_name||'-',size:ordered?.size_name||'-',quantity:Number(item.quantity),lineTotal:Number(ordered?.unit_price||0)*Number(item.quantity)};}),voucherCode:order.voucher_code,subtotal:Number(order.subtotal),discount:Number(order.discount_amount),shippingFee:Number(order.shipping_fee),total:Number(order.total_amount),paymentMethod:order.payment_method,reason:r.reason_category,resolution:r.requested_resolution,notes:r.customer_notes,proofUrls};
+}
+
+export function formatReturnNotification(snapshot:ReturnNotificationSnapshot){
+  const reasons:Record<string,string>={WRONG_ITEM:'Barang yang diterima tidak sesuai',DAMAGED:'Barang rusak',DEFECTIVE:'Cacat jahitan atau kain'};
+  const resolutions:Record<string,string>={REFUND:'Pengembalian dana',REPLACEMENT:'Penggantian produk'};
+  const items=snapshot.items.map(item=>`• ${item.productName} — ${item.color} / ${item.size} × ${item.quantity} (${rupiah(item.lineTotal)})`).join('\n')||'• Tidak ada rincian barang';
+  const proofs=snapshot.proofUrls.length?snapshot.proofUrls.map((url,index)=>`${snapshot.proofUrls.length>1?`${index+1}. `:''}${url}`).join('\n'):'Tidak dilampirkan';
+  return `Pengajuan Retur Baru — Perlu Ditinjau\n\nNomor retur: ${snapshot.returnNumber}\nNomor pesanan: ${snapshot.orderNumber}\nNama: ${snapshot.customerName}\nEmail: ${snapshot.customerEmail}\nWhatsApp: ${snapshot.customerWhatsapp}\nTanggal lahir: ${snapshot.customerBirthDate}\nAlamat: ${snapshot.address}\n\n${items}\n\nVoucher: ${snapshot.voucherCode||'-'}\nSubtotal: ${rupiah(snapshot.subtotal)}\nDiskon: ${rupiah(snapshot.discount)}\nOngkir: ${rupiah(snapshot.shippingFee)}\nTotal: ${rupiah(snapshot.total)}\nMetode: ${snapshot.paymentMethod}\n\nAlasan retur: ${reasons[snapshot.reason]||snapshot.reason}\nSolusi yang diminta: ${resolutions[snapshot.resolution]||snapshot.resolution}\nCatatan: ${snapshot.notes}\nBukti retur (tautan sementara): ${proofs}`;
+}
+
 export async function renderOwnerNotification(
   job: TelegramOutboxJob,
   stockLookup: (variantId: unknown) => Promise<LowStockSnapshot | null> = lookupLowStockSnapshot
@@ -74,7 +104,11 @@ export async function renderOwnerNotification(
     const items = (o.order_items || []).map((item: any) => `• ${item.product_name} — ${item.color_name} / ${item.size_name} × ${item.quantity} (${rupiah(item.line_total)})`).join('\n');
     return `Pesanan Baru — Perlu Verifikasi Pembayaran\n\nNomor: ${o.order_number}\nNama: ${o.customer_name}\nEmail: ${o.customer_email}\nWhatsApp: ${o.customer_whatsapp}\nTanggal lahir: ${o.customer_birth_date}\nAlamat: ${o.address_line}, ${o.village}, ${o.subdistrict}, ${o.city}, ${o.province} ${o.postal_code}\n\n${items}\n\nVoucher: ${o.voucher_code || '-'}\nSubtotal: ${rupiah(o.subtotal)}\nDiskon: ${rupiah(o.discount_amount)}\nOngkir: ${rupiah(o.shipping_fee)}\nTotal: ${rupiah(o.total_amount)}\nMetode: ${o.payment_method}\nBukti (tautan sementara): ${proof}`;
   }
-  if (job.event_type === 'NEW_RETURN') return `Pengajuan retur baru\nNomor retur: ${job.payload.returnNumber}`;
+  if (job.event_type === 'NEW_RETURN') {
+    const snapshot=await lookupReturnSnapshot(job.payload.returnId);
+    if(!snapshot)return `Pengajuan Retur Baru — Perlu Ditinjau\n\nNomor retur: ${job.payload.returnNumber||'-'}\nData pengajuan tidak lagi tersedia.`;
+    return formatReturnNotification(snapshot);
+  }
   if (job.event_type === 'LOW_STOCK') {
     const p = job.payload;
     const snapshotComplete = typeof p.productName === 'string' && typeof p.color === 'string'

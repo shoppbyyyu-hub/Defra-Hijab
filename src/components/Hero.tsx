@@ -17,7 +17,7 @@ export const Hero: React.FC<HeroProps> = ({ banner, loading = false }) => {
   const mobileFocalY = banner?.mobileFocalY ?? (banner?.focalY ?? 50);
 
   return (
-    <section data-reveal className="w-full overflow-hidden" aria-label="Kampanye Utama">
+    <section className="w-full overflow-hidden" aria-label="Kampanye Utama">
       {/* Container Full Bleed — Bebas Teks Mutlak Sesuai design.md */}
       <div className="w-full relative aspect-[4/5] md:aspect-[2/1] bg-[#F3EBDF]">
         {loading ? <div aria-label="Memuat campaign utama" className="defra-skeleton absolute inset-0 bg-[#F3EBDF]"/> : <picture>

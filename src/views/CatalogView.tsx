@@ -46,7 +46,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
     };
     refresh();
     const unsubscribe = subscribeStorefrontInvalidation(refresh);
-    const handlePageShow = () => refresh();
+    const handlePageShow = (event:PageTransitionEvent) => { if (event.persisted) refresh(); };
     window.addEventListener('pageshow', handlePageShow);
     return () => { controller?.abort(); unsubscribe(); window.removeEventListener('pageshow', handlePageShow); };
   }, []);
@@ -108,7 +108,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
             {/* Category and Sort Selectors */}
             <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-              <select
+              {!initialCategory && <select
                 value={selectedCat}
                 onChange={(e) => setSelectedCat(e.target.value)}
                 className="h-11 px-3 bg-white border border-[#E8E2DC] rounded-[4px] text-xs font-medium text-[#282420] focus:outline-none focus:border-[#282420]"
@@ -119,7 +119,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </select>}
 
               <select
                 value={sortOption}
@@ -156,8 +156,8 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <ProductCatalog
             products={displayed}
             onSelectProduct={(id) => onNavigate(`/produk/${id}`)}
-            title={isWishlistView ? 'Item Favorit Anda' : 'Daftar Produk'}
-            categories={categories}
+            title={isWishlistView ? 'Item Favorit Anda' : initialCategory ? '' : 'Daftar Produk'}
+            categories={initialCategory ? [] : categories}
           />
         )}
       </main>

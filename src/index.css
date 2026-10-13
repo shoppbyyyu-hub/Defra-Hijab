@@ -487,6 +487,14 @@
   }
 }
 
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 .admin-mobile-bottom-nav {
   display: none;
 }
@@ -641,7 +649,9 @@
 }
 
 .motion-tab-enter {
-  animation: defra-fade-slide-in 240ms cubic-bezier(.22, .7, .25, 1) both;
+  /* A transformed ancestor changes the containing block of every fixed admin
+     modal below it. Keep tab entry opacity-only so dialogs stay viewport-fixed. */
+  animation: defra-fade-in 220ms ease-out both;
 }
 
 [data-reveal] {

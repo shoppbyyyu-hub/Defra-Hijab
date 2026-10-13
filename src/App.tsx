@@ -22,8 +22,10 @@ export default function App() {
   });
 
   useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
     const handlePopState = () => {
       setCurrentPath(window.location.pathname || '/');
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -76,6 +78,7 @@ export default function App() {
   }, [currentPath]);
 
   useEffect(() => {
+    if (!currentPath.startsWith('/defraowner') && currentPath !== '/Entrance') return;
     let active = true;
     const refresh = async () => {
       try {
@@ -91,7 +94,7 @@ export default function App() {
     void refresh();
     const timer = setInterval(refresh, 45 * 60 * 1000);
     return () => { active = false; clearInterval(timer); };
-  }, []);
+  }, [currentPath]);
 
   const navigate = (path: string) => {
     window.history.pushState({}, '', path);

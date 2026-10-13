@@ -1217,7 +1217,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onNavigate }) => {
                 <label className="block text-xs font-medium text-[#282420] mb-1.5">
                   Gunakan Voucher Promo
                 </label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_104px] sm:grid-cols-[minmax(0,1fr)_auto] gap-2">
                   <input
                     type="text"
                     placeholder="Kode promo"
@@ -1229,13 +1229,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ onNavigate }) => {
                         handleApplyVoucher();
                       }
                     }}
-                    className="flex-1 h-10 px-3 bg-white border border-[#E8E2DC] rounded-[4px] text-xs text-[#282420] uppercase focus:outline-none focus:border-[#282420]"
+                    className="min-w-0 w-full h-10 px-3 bg-white border border-[#E8E2DC] rounded-[4px] text-xs text-[#282420] uppercase focus:outline-none focus:border-[#282420]"
                   />
                   <button
                     type="button"
                     onClick={handleApplyVoucher}
                     disabled={isApplyingVoucher}
-                    className="px-4 h-10 bg-[#282420] text-white text-xs font-medium rounded-[4px] hover:bg-[#3d3834] disabled:opacity-50 transition-colors"
+                    className="w-full sm:w-auto px-3 sm:px-4 h-10 bg-[#282420] text-white text-xs font-medium rounded-[4px] hover:bg-[#3d3834] disabled:opacity-50 transition-colors whitespace-nowrap"
                   >
                     {isApplyingVoucher ? 'Memproses...' : 'Terapkan'}
                   </button>

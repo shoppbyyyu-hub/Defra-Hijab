@@ -44,7 +44,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     };
     refresh();
     const unsubscribe = subscribeStorefrontInvalidation(refresh);
-    const handlePageShow = () => refresh();
+    const handlePageShow = (event:PageTransitionEvent) => { if (event.persisted) refresh(); };
     window.addEventListener('pageshow', handlePageShow);
     return () => { controller?.abort(); unsubscribe(); window.removeEventListener('pageshow', handlePageShow); };
   }, []);

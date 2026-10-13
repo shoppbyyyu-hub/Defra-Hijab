@@ -15,14 +15,15 @@ export const AsSeenOn:React.FC<AsSeenOnProps>=({reels,onCommunityLinkClick})=>{
       <button type="button" onClick={()=>onCommunityLinkClick?.()} className="mt-2 text-[14px] text-[#706861] hover:text-[#282420] transition-colors focus-visible:outline-2 focus-visible:outline-[#282420]">Worn and loved by the community &gt;</button>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 md:gap-3">
-      {reels.map(reel=><DeferredCommunityEmbed key={reel.id} reel={reel}/>)}
+      {reels.map((reel,index)=><DeferredCommunityEmbed key={reel.id} reel={reel} eager={index===0}/>)}
     </div>
   </section>;
 };
 
-const DeferredCommunityEmbed:React.FC<{reel:CommunityReel}>=({reel})=>{
+const DeferredCommunityEmbed:React.FC<{reel:CommunityReel;eager:boolean}>=({reel,eager})=>{
   const hostRef=useRef<HTMLDivElement>(null);
   const [nearViewport,setNearViewport]=useState(false);
+  const [requested,setRequested]=useState(eager);
   useEffect(()=>{
     const host=hostRef.current;
     if(!host)return;
@@ -33,6 +34,6 @@ const DeferredCommunityEmbed:React.FC<{reel:CommunityReel}>=({reel})=>{
   },[]);
   const provider=reel.provider === 'YOUTUBE' ? 'YouTube' : reel.provider === 'INSTAGRAM' ? 'Instagram' : 'TikTok';
   return <div ref={hostRef} className="relative w-full aspect-[9/16] bg-[#F3EBDF] overflow-hidden">
-    {nearViewport?<iframe src={socialEmbedUrl(reel)} title={`Konten ${provider} Defra Hijab`} className="absolute inset-0 w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<div className="absolute inset-0 grid place-items-center text-[11px] text-[#706861]">Video dimuat saat terlihat</div>}
+    {nearViewport&&requested?<iframe src={socialEmbedUrl(reel)} title={`Konten ${provider} Defra Hijab`} className="absolute inset-0 w-full h-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" referrerPolicy="strict-origin-when-cross-origin"/>:<button type="button" onClick={()=>setRequested(true)} className="absolute inset-0 w-full h-full grid place-items-center text-[12px] text-[#282420] bg-[#F3EBDF]" aria-label={`Putar konten ${provider}`}><span className="px-3 py-2 bg-white/90 border border-[#E8E2DC]">Putar {provider}</span></button>}
   </div>;
 };

@@ -7,6 +7,7 @@ import { searchDestinations, calculateShippingCost, getKnownDestination, invalid
 import { DEFAULT_DEFRA_QRIS_STATIC_PAYLOAD, generateDynamicQRISPayload, generateQRDataURL, validateBaseQRISPayload } from '../utils/qris.ts';
 import { getOwnerNotificationStatus, sendTelegramMessage } from './ownerNotifications.ts';
 import { parseSocialMediaUrl } from '../utils/socialMedia.ts';
+import { createInvoicePdf } from './invoicePdf.ts';
 
 export const apiRouter = express.Router();
 apiRouter.use(express.json({limit:'1mb'}));
@@ -19,7 +20,7 @@ function bearer(req:express.Request){const h=req.headers.authorization||'';retur
 async function requireAdmin(req:express.Request,res:express.Response,next:express.NextFunction){const user=await assertOwner(bearer(req));if(!user)return res.status(403).json({error:'Akses tidak diizinkan. Silakan login kembali di /Entrance.'});res.locals.owner=user;next();}
 function token(req:express.Request){return String(req.headers['x-reservation-token']||req.body?.sessionToken||'');}
 function dbError(res:express.Response,e:any,status=400){const code=String(e?.message||'DATABASE_ERROR');return res.status(status).json({code,error:humanError(code)});}
-function humanError(code:string){const messages:Record<string,string>={SHIPPING_ORIGIN_INVALID:'Alamat asal pengiriman belum valid.',SHIPPING_ORIGIN_CHANGED:'Alamat asal berubah. Jangan membayar ulang; pilih ulang layanan atau hubungi owner bila sudah membayar.',INSUFFICIENT_STOCK:'Stok tidak mencukupi.',VOUCHER_INVALID:'Voucher tidak tersedia, tidak aktif, atau kuotanya habis.',VOUCHER_SCOPE_INVALID:'Voucher tidak berlaku untuk isi keranjang ini.',RESERVATION_NOT_FOUND:'Reservasi tidak ditemukan.',RESERVATION_NOT_ACTIVE:'Reservasi sudah tidak aktif.',RESERVATION_EXPIRED:'Reservasi sudah kedaluwarsa.',RESERVATION_REQUIRES_RECOVERY:'Reservasi perlu dipulihkan. Jangan membuat pembayaran baru; hubungi owner bila sudah membayar.'};return messages[code]||code;}
+function humanError(code:string){const messages:Record<string,string>={SHIPPING_ORIGIN_INVALID:'Alamat asal pengiriman belum valid.',SHIPPING_ORIGIN_CHANGED:'Alamat asal berubah. Jangan membayar ulang; pilih ulang layanan atau hubungi owner bila sudah membayar.',INSUFFICIENT_STOCK:'Stok tidak mencukupi.',VOUCHER_INVALID:'Voucher tidak tersedia, tidak aktif, atau kuotanya habis.',VOUCHER_SCOPE_INVALID:'Voucher tidak berlaku untuk isi keranjang ini.',RESERVATION_NOT_FOUND:'Reservasi tidak ditemukan.',RESERVATION_NOT_ACTIVE:'Reservasi sudah tidak aktif.',RESERVATION_EXPIRED:'Reservasi sudah kedaluwarsa.',RESERVATION_REQUIRES_RECOVERY:'Reservasi perlu dipulihkan. Jangan membuat pembayaran baru; hubungi owner bila sudah membayar.',RETURN_WINDOW_CLOSED:'Retur hanya dapat diajukan setelah pesanan diterima dan paling lambat 7 hari sejak tanggal barang diterima.',ORDER_NOT_FOUND:'Pesanan tidak ditemukan. Pastikan Nomor Pesanan, email, dan WhatsApp sama persis dengan data checkout.',ORDER_IDENTITY_MISMATCH:'Nomor pesanan, email, atau WhatsApp tidak cocok.',INVALID_RETURN_ITEM:'Barang atau jumlah retur tidak sesuai dengan pesanan.'};return messages[code]||code;}
 function reservationDto(r:any){return {id:r.id,expiresAt:r.expires_at,items:(r.reservation_items||[]).map((i:any)=>({productId:i.product_id,variantId:i.variant_id,productName:i.product_name,color:i.color_name,size:i.size_name,unitPrice:Number(i.unit_price),weightGrams:i.weight_grams,imageUrl:publicStorageUrl(i.image_path),quantity:i.quantity})),subtotal:Number(r.subtotal),discountAmount:Number(r.discount_amount),voucherId:r.voucher_id,shippingFee:Number(r.shipping_fee),shippingService:r.shipping_service_label,destinationId:r.destination_id,shippingOriginId:r.shipping_origin_id,totalAmount:Number(r.total_amount),status:r.status,createdAt:r.created_at,paymentMethod:r.payment_method};}
 function orderDto(o:any){const p=o.payments?.[0];return {id:o.id,orderNumber:o.order_number,reservationId:o.reservation_id,customerName:o.customer_name,customerEmail:o.customer_email,customerWhatsapp:o.customer_whatsapp,customerBirthDate:o.customer_birth_date,addressLine:o.address_line,province:o.province,city:o.city,subdistrict:o.subdistrict,village:o.village,postalCode:o.postal_code,subtotal:Number(o.subtotal),discount:Number(o.discount_amount),shippingFee:Number(o.shipping_fee),shippingService:o.shipping_service_label,totalAmount:Number(o.total_amount),paymentMethod:o.payment_method,paymentStatus:o.payment_status,fulfillmentStatus:o.fulfillment_status,paymentProofUrl:p?.signedUrl||'',paymentProofMime:p?.proof_mime||'',rejectionReason:o.rejection_reason,rejectionDeadline:o.rejection_deadline,actualDeliveryDate:o.actual_delivery_date,createdAt:o.created_at,updatedAt:o.updated_at,refundAmount:Number(o.refund_amount||0),refundReason:o.refund_reason,cancellationReason:o.cancellation_reason,items:(o.order_items||[]).map((x:any)=>({id:x.id,variantId:x.variant_id,productName:x.product_name,color:x.color_name,size:x.size_name,unitPrice:Number(x.unit_price),quantity:x.quantity,subtotal:Number(x.line_total),allocatedBatches:(x.order_fifo_allocations||[]).map((a:any)=>({batchId:a.batch_id,quantity:a.quantity,costPerUnit:Number(a.cost_per_unit)}))})),costs:Array.isArray(o.order_costs)?o.order_costs[0]:o.order_costs};}
 async function uploadFile(bucket:string,file:Express.Multer.File,prefix:string){const ext=({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf'} as any)[file.mimetype];if(!ext)throw new Error('Format file tidak didukung.');const path=`${prefix}/${crypto.randomUUID()}.${ext}`;const {error}=await getSupabaseAdmin().storage.from(bucket).upload(path,file.buffer,{contentType:file.mimetype,upsert:false});if(error)throw error;return path;}
@@ -55,6 +56,41 @@ apiRouter.post('/payments/qris',asyncRoute(async(req:any,res:any)=>{const sessio
 
 apiRouter.post('/orders/finalize',upload.single('paymentProof'),asyncRoute(async(req:any,res:any)=>{if(!req.file)return res.status(400).json({error:'Bukti pembayaran wajib diunggah, maksimal 2 MB.'});let path='';try{path=await uploadFile('payment-proofs',req.file,'orders');const order=await repository.finalize({p_reservation_id:req.body.reservationId,p_session_token:req.body.sessionToken,p_customer:{name:req.body.customerName,email:req.body.customerEmail,whatsapp:req.body.customerWhatsapp,birthDate:req.body.customerBirthDate,addressLine:req.body.addressLine,province:req.body.province,city:req.body.city,subdistrict:req.body.subdistrict,village:req.body.village||req.body.subdistrict,postalCode:req.body.postalCode},p_proof_path:path,p_proof_mime:req.file.mimetype});if(order.error){await getSupabaseAdmin().storage.from('payment-proofs').remove([path]);path='';return res.status(409).json({code:order.error,error:humanError(order.error)});}if(order.alreadyFinalized){await getSupabaseAdmin().storage.from('payment-proofs').remove([path]);path='';}const settings:any=await repository.settings();const draft=`Pesanan ${order.orderNumber} telah dibuat. Bukti pembayaran menunggu verifikasi owner.`;res.json({orderNumber:order.orderNumber,order,whatsappDraftText:draft,whatsappNumber:settings.whatsappNumber});}catch(e){if(path)await getSupabaseAdmin().storage.from('payment-proofs').remove([path]);dbError(res,e);}}));
 apiRouter.post('/orders/check-status',asyncRoute(async(req:any,res:any)=>{if(limited(`status:${req.ip}`,10,60000))return res.status(429).json({error:'Batas cek status tercapai. Coba lagi dalam 1 menit.'});const input=String(req.body.query??'');if(!input)return res.status(400).json({error:'Masukkan nomor pesanan, email, atau WhatsApp.'});const db=getSupabaseAdmin(),fields='id,order_number,payment_status,fulfillment_status,tracking_number,created_at,updated_at';const results=await Promise.all([db.from('orders').select(fields).eq('order_number',input),db.from('orders').select(fields).eq('customer_email',input),db.from('orders').select(fields).eq('customer_whatsapp',input)]);for(const r of results)if(r.error)throw r.error;const unique=new Map<string,any>();for(const r of results)for(const o of r.data||[])unique.set(o.id,o);const data=[...unique.values()].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));if(!data.length)return res.status(404).json({error:'Pesanan tidak ditemukan.'});res.json({orders:data.map((o:any)=>({orderNumber:o.order_number,paymentStatus:o.payment_status,fulfillmentStatus:o.fulfillment_status,trackingNumber:o.tracking_number,createdAt:o.created_at,updatedAt:o.updated_at}))});}));
+const invoiceOrderSelect='*,order_items(id,product_name,color_name,size_name,unit_price,quantity,line_total),payments(status,verified_at)';
+apiRouter.post('/orders/invoice-access',asyncRoute(async(req:any,res:any)=>{
+  if(limited(`invoice-access:${req.ip}`,5,60000))return res.status(429).json({error:'Terlalu banyak percobaan verifikasi invoice. Coba lagi dalam 1 menit.'});
+  const orderNumber=String(req.body.orderNumber??''),email=String(req.body.email??''),whatsapp=String(req.body.whatsapp??'');
+  if(!orderNumber||!email||!whatsapp)return res.status(400).json({error:'Nomor pesanan, email, dan WhatsApp wajib diisi persis seperti saat checkout.'});
+  const db=getSupabaseAdmin();
+  const {data:order,error}=await db.from('orders').select('id,payment_status').eq('order_number',orderNumber).eq('customer_email',email).eq('customer_whatsapp',whatsapp).maybeSingle();
+  if(error)throw error;
+  if(!order)return res.status(404).json({code:'ORDER_IDENTITY_MISMATCH',error:humanError('ORDER_IDENTITY_MISMATCH')});
+  if(order.payment_status!=='VERIFIED')return res.status(409).json({code:'PAYMENT_NOT_VERIFIED',error:'Invoice tersedia setelah pembayaran diverifikasi admin.'});
+  const accessToken=crypto.randomBytes(32).toString('base64url');
+  const tokenHash=crypto.createHash('sha256').update(accessToken).digest('hex');
+  const expiresAt=new Date(Date.now()+15*60_000).toISOString();
+  const {error:saveError}=await db.from('order_invoice_access').upsert({order_id:order.id,token_hash:tokenHash,expires_at:expiresAt,updated_at:new Date().toISOString()},{onConflict:'order_id'});
+  if(saveError)throw saveError;
+  res.setHeader('Cache-Control','no-store');
+  res.json({accessToken,expiresAt});
+}));
+apiRouter.post('/orders/invoice',asyncRoute(async(req:any,res:any)=>{
+  if(limited(`invoice-download:${req.ip}`,10,60000))return res.status(429).json({error:'Terlalu banyak permintaan invoice. Coba lagi dalam 1 menit.'});
+  const orderNumber=String(req.body.orderNumber??''),accessToken=String(req.body.accessToken??'');
+  if(!orderNumber||!accessToken)return res.status(400).json({error:'Akses invoice tidak valid.'});
+  const db=getSupabaseAdmin(),tokenHash=crypto.createHash('sha256').update(accessToken).digest('hex');
+  const {data:access,error:accessError}=await db.from('order_invoice_access').select('order_id,expires_at').eq('token_hash',tokenHash).gt('expires_at',new Date().toISOString()).maybeSingle();
+  if(accessError)throw accessError;
+  if(!access)return res.status(403).json({error:'Akses invoice sudah tidak berlaku. Verifikasi ulang data pesanan.'});
+  const {data:order,error}=await db.from('orders').select(invoiceOrderSelect).eq('id',access.order_id).eq('order_number',orderNumber).eq('payment_status','VERIFIED').maybeSingle();
+  if(error)throw error;
+  if(!order)return res.status(404).json({error:'Invoice tidak tersedia.'});
+  const pdf=await createInvoicePdf(order);
+  res.setHeader('Cache-Control','private, no-store');
+  res.setHeader('Content-Type','application/pdf');
+  res.setHeader('Content-Disposition',`attachment; filename="invoice-${orderNumber.replace(/[^A-Za-z0-9_-]/g,'')}.pdf"`);
+  res.send(pdf);
+}));
 apiRouter.post('/returns/submit',upload.array('proofs',5),asyncRoute(async(req:any,res:any)=>{const body=req.body;let items:any=null;if(body.items){try{items=JSON.parse(body.items);}catch{return res.status(400).json({error:'Daftar barang retur tidak valid.'});}}const {data,error}=await getSupabaseAdmin().rpc('submit_return_request',{p_order_number:body.orderNumber,p_email:body.customerEmail,p_whatsapp:body.customerWhatsapp,p_resolution:body.requestedResolution,p_reason:body.reasonCategory,p_notes:body.customerNotes,p_items:items});if(error)return dbError(res,error);const uploaded:string[]=[];try{for(const file of (req.files as Express.Multer.File[]||[])){const path=await uploadFile('return-proofs',file,`returns/${data.id}`);uploaded.push(path);const {error:e}=await getSupabaseAdmin().from('return_proofs').insert({return_id:data.id,storage_path:path});if(e)throw e;}res.json({returnRequest:data});}catch(e){if(uploaded.length)await getSupabaseAdmin().storage.from('return-proofs').remove(uploaded);await getSupabaseAdmin().from('return_requests').delete().eq('id',data.id);throw e;}}));
 
 const refreshCookie=(req:express.Request)=>decodeURIComponent((req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('defra_refresh='))?.slice('defra_refresh='.length)||'');
@@ -194,6 +230,16 @@ apiRouter.post('/admin/upload-banner',upload.single('file'),asyncRoute(async(req
 
 apiRouter.get('/admin/orders',asyncRoute(async(_q:any,res:any)=>{const {data,error}=await getSupabaseAdmin().from('orders').select('*,order_items(*,order_fifo_allocations(*)),payments(*),order_costs(*)').order('created_at',{ascending:false});if(error)throw error;res.json({orders:(data||[]).map(orderDto)});}));
 apiRouter.get('/admin/orders/:orderNumber',asyncRoute(async(req:any,res:any)=>{const {data,error}=await getSupabaseAdmin().from('orders').select('*,order_items(*,order_fifo_allocations(*)),payments(*),order_costs(*)').eq('order_number',req.params.orderNumber).maybeSingle();if(error)throw error;if(!data)return res.status(404).json({error:'Pesanan tidak ditemukan.'});for(const p of data.payments||[])p.signedUrl=(await getSupabaseAdmin().storage.from(p.proof_bucket).createSignedUrl(p.proof_path,300)).data?.signedUrl;res.json({order:orderDto(data)});}));
+apiRouter.get('/admin/orders/:orderNumber/invoice',asyncRoute(async(req:any,res:any)=>{
+  const {data:order,error}=await getSupabaseAdmin().from('orders').select(invoiceOrderSelect).eq('order_number',req.params.orderNumber).eq('payment_status','VERIFIED').maybeSingle();
+  if(error)throw error;
+  if(!order)return res.status(409).json({error:'Invoice tersedia setelah pembayaran diverifikasi admin.'});
+  const pdf=await createInvoicePdf(order);
+  res.setHeader('Cache-Control','private, no-store');
+  res.setHeader('Content-Type','application/pdf');
+  res.setHeader('Content-Disposition',`attachment; filename="invoice-${req.params.orderNumber.replace(/[^A-Za-z0-9_-]/g,'')}.pdf"`);
+  res.send(pdf);
+}));
 apiRouter.post('/admin/orders/:orderNumber/verify-payment',asyncRoute(async(req:any,res:any)=>{const {data:o,error}=await getSupabaseAdmin().from('orders').update({payment_status:req.body.verified===false?'REVISION_REQUESTED':'VERIFIED',rejection_reason:req.body.reason||null,rejection_deadline:req.body.deadline||null,updated_at:new Date().toISOString()}).eq('order_number',req.params.orderNumber).select('id').single();if(error)throw error;await getSupabaseAdmin().from('payments').update({status:req.body.verified===false?'REVISION_REQUESTED':'VERIFIED',verified_at:req.body.verified===false?null:new Date().toISOString(),verified_by:res.locals.owner.id}).eq('order_id',o.id);res.json({success:true});}));
 apiRouter.post('/admin/orders/:orderNumber/update-fulfillment',asyncRoute(async(req:any,res:any)=>{const patch:any={fulfillment_status:req.body.fulfillmentStatus,tracking_number:req.body.trackingNumber||null,updated_at:new Date().toISOString()};if(req.body.fulfillmentStatus==='DELIVERED')patch.actual_delivery_date=req.body.actualDeliveryDate||new Date().toISOString().slice(0,10);const {error}=await getSupabaseAdmin().from('orders').update(patch).eq('order_number',req.params.orderNumber);if(error)throw error;res.json({success:true});}));
 apiRouter.post('/admin/orders/:orderNumber/cancel',asyncRoute(async(req:any,res:any)=>{const {error}=await getSupabaseAdmin().rpc('cancel_order_restore_stock',{p_order_number:req.params.orderNumber,p_reason:req.body.reason,p_actor:res.locals.owner.id});if(error)throw error;res.json({success:true});}));
@@ -210,7 +256,21 @@ apiRouter.delete('/admin/orders/:orderNumber',asyncRoute(async(req:any,res:any)=
   }
   res.json({success:true,deleted:true});
 }));
-apiRouter.get('/admin/returns',asyncRoute(async(_q:any,res:any)=>{const {data,error}=await getSupabaseAdmin().from('return_requests').select('*,orders(order_number),return_items(*),return_proofs(*)').order('created_at',{ascending:false});if(error)throw error;res.json({returns:(data||[]).map((x:any)=>({id:x.id,orderId:x.order_id,orderNumber:x.orders?.order_number,returnNumber:x.return_number,requestedResolution:x.requested_resolution,reasonCategory:x.reason_category,customerNotes:x.customer_notes,status:x.status,adminNotes:x.admin_notes,inspectionResult:x.inspection_result,receivedDate:x.received_at,resolvedDate:x.resolved_at,createdAt:x.created_at,proofImageUrls:[]}))});}));
+apiRouter.get('/admin/returns',asyncRoute(async(_q:any,res:any)=>{
+  const db=getSupabaseAdmin();
+  const {data,error}=await db.from('return_requests').select('*,orders(order_number),return_items(*),return_proofs(*)').order('created_at',{ascending:false});
+  if(error)throw error;
+  const returns=await Promise.all((data||[]).map(async(x:any)=>{
+    const proofImageUrls=(await Promise.all((x.return_proofs||[]).map(async(proof:any)=>{
+      const {data:signed,error:signedError}=await db.storage.from(proof.bucket||'return-proofs').createSignedUrl(proof.storage_path,900);
+      if(signedError)return null;
+      return signed?.signedUrl||null;
+    }))).filter(Boolean);
+    return {id:x.id,orderId:x.order_id,orderNumber:x.orders?.order_number,returnNumber:x.return_number,requestedResolution:x.requested_resolution,reasonCategory:x.reason_category,customerNotes:x.customer_notes,status:x.status,adminNotes:x.admin_notes,inspectionResult:x.inspection_result,receivedDate:x.received_at,resolvedDate:x.resolved_at,createdAt:x.created_at,proofImageUrls};
+  }));
+  res.setHeader('Cache-Control','private, no-store');
+  res.json({returns});
+}));
 apiRouter.post('/admin/returns/:returnNumber/status',asyncRoute(async(req:any,res:any)=>{const {error}=await getSupabaseAdmin().rpc('update_return_status',{p_return_number:req.params.returnNumber,p_status:req.body.status,p_admin_notes:req.body.adminNotes||null,p_inspection:req.body.inspectionResult||null,p_actor:res.locals.owner.id});if(error)throw error;res.json({success:true});}));
 
 apiRouter.get('/admin/dashboard',asyncRoute(async(req:any,res:any)=>{

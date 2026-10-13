@@ -91,7 +91,7 @@ export const AdminReturnsTab: React.FC<ReturnsTabProps> = ({
         <div>
           <h1 className="text-[26px] font-medium tracking-tight text-[#24221F]">Retur &amp; Komplain Barang</h1>
           <p className="text-xs text-[#716B64] mt-0.5">
-            Tinjau pengajuan retur dalam 3 hari (Jabodetabek) setelah barang diterima, periksa kondisi barang, dan proses penggantian atau pengembalian uang.
+            Tinjau pengajuan retur maksimal 7 hari setelah barang diterima, periksa kondisi barang, dan proses penggantian atau pengembalian uang.
           </p>
         </div>
 

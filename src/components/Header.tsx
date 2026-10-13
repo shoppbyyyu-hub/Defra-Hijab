@@ -10,10 +10,9 @@ interface HeaderProps {
 }
 const EMPTY_CATEGORIES: Category[] = [];
 
-export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenSearch, categories = EMPTY_CATEGORIES }) => {
+export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenSearch }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [navCategories, setNavCategories] = useState<Category[]>(categories);
   const { totalItems, wishlist, setIsCartOpen } = useCart();
 
   useEffect(() => {
@@ -27,19 +26,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenSearch, catego
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    if (categories.length) {
-      setNavCategories(categories);
-      return;
-    }
-    const controller = new AbortController();
-    fetch('/api/public/categories', { cache: 'no-store', signal: controller.signal })
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('CATEGORY_FETCH_FAILED')))
-      .then((data) => setNavCategories(data.categories || []))
-      .catch(() => {});
-    return () => controller.abort();
-  }, [categories]);
 
   return (
     <>
@@ -160,19 +146,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenSearch, catego
                 >
                   Semua Koleksi Hijab
                 </button>
-                {navCategories.filter((category) => category.isActive).slice(0, 4).map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => {
-                      onNavigate(`/katalog?cat=${encodeURIComponent(category.id)}`);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="text-left py-2 hover:text-[#B88770] transition-colors text-[#706861]"
-                  >
-                    {category.name}
-                  </button>
-                ))}
                 <button
                   type="button"
                   onClick={() => {

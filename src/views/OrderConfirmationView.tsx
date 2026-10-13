@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { Header } from '../components/Header.tsx';
 import { Footer } from '../components/Footer.tsx';
 import { CheckCircle2, Copy, MessageCircle, ArrowRight, Clock } from 'lucide-react';
@@ -16,6 +16,10 @@ export const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({
   const [order, setOrder] = useState<Order | null>(null);
   const [copied, setCopied] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState('6281234567890');
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [orderNumber]);
 
   useEffect(() => {
     fetch('/api/public/bootstrap')

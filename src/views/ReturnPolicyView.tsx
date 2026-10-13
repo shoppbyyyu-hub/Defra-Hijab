@@ -78,14 +78,14 @@ export const ReturnPolicyView: React.FC<ReturnPolicyViewProps> = ({
           Defra Hijab berkomitmen menjaga kepuasan Anda melalui jaminan kualitas material dan kerapian jahitan setiap helai hijab.
         </p>
 
-        {/* Kotak Kebijakan Resmi 3 Hari */}
+        {/* Kotak Kebijakan Resmi 7 Hari */}
         <div className="p-6 border border-[#E8E2DC] rounded-[4px] bg-[#F3EBDF]/20 space-y-3 mb-10 text-xs text-[#706861]">
           <h2 className="text-sm font-medium text-[#282420] flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#B88770]" />
-            <span>Ketentuan Retur 3 Hari Defra Hijab</span>
+            <span>Ketentuan Retur 7 Hari Defra Hijab</span>
           </h2>
           <p>
-            &bull; <strong>Jangka Waktu:</strong> Pengajuan retur dapat dilakukan maksimal <strong>3 hari (Jabodetabek)</strong> sejak tanggal faktual barang diterima.
+            &bull; <strong>Jangka Waktu:</strong> Pengajuan retur dapat dilakukan maksimal <strong>7 hari</strong> sejak tanggal faktual barang diterima.
           </p>
           <p>
             &bull; <strong>Syarat Kelayakan:</strong> Hanya berlaku untuk barang salah kirim, produk rusak saat ekspedisi, atau cacat jahitan/kain dari pabrik. Kami tidak melayani retur karena perubahan selera atau salah memilih warna secara mandiri.
@@ -119,6 +119,10 @@ export const ReturnPolicyView: React.FC<ReturnPolicyViewProps> = ({
             <h2 className="text-[16px] font-medium text-[#282420] pb-2 border-b border-[#E8E2DC]">
               Formulir Pengajuan Retur
             </h2>
+
+            <p className="text-xs text-[#706861] -mt-3">
+              Gunakan Nomor Pesanan yang diterima setelah checkout, bukan nama penerima atau nomor resi.
+            </p>
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-[4px] flex items-start gap-3 text-xs text-red-800">
