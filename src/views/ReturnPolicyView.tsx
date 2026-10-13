@@ -78,14 +78,14 @@ export const ReturnPolicyView: React.FC<ReturnPolicyViewProps> = ({
           Defra Hijab berkomitmen menjaga kepuasan Anda melalui jaminan kualitas material dan kerapian jahitan setiap helai hijab.
         </p>
 
-        {/* Kotak Kebijakan Resmi 7 Hari */}
+        {/* Kotak Kebijakan Resmi 3 Hari */}
         <div className="p-6 border border-[#E8E2DC] rounded-[4px] bg-[#F3EBDF]/20 space-y-3 mb-10 text-xs text-[#706861]">
           <h2 className="text-sm font-medium text-[#282420] flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#B88770]" />
-            <span>Ketentuan Retur 7 Hari Defra Hijab</span>
+            <span>Ketentuan Retur 3 Hari Defra Hijab</span>
           </h2>
           <p>
-            &bull; <strong>Jangka Waktu:</strong> Pengajuan retur dapat dilakukan maksimal <strong>7 hari</strong> sejak tanggal faktual barang diterima.
+            &bull; <strong>Jangka Waktu:</strong> Pengajuan retur dapat dilakukan maksimal <strong>3 hari (Jabodetabek)</strong> sejak tanggal faktual barang diterima.
           </p>
           <p>
             &bull; <strong>Syarat Kelayakan:</strong> Hanya berlaku untuk barang salah kirim, produk rusak saat ekspedisi, atau cacat jahitan/kain dari pabrik. Kami tidak melayani retur karena perubahan selera atau salah memilih warna secara mandiri.
