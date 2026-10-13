@@ -901,7 +901,7 @@ export const AdminSettingsTab: React.FC<SettingsTabProps> = ({
                     <strong>Pembaruan otomatis jika total berubah:</strong> Jika rincian belanja, diskon voucher, atau biaya ongkir berubah, QR baru wajib di-generate ulang dengan nominal yang sesuai.
                   </li>
                   <li>
-                    <strong>Integritas file aset:</strong> Generator ini tidak menimpa aset QRIS asli di <code>/public/assets/payments/qris.png</code>.
+                    <strong>Integritas file aset:</strong> Generator ini tidak menimpa aset QRIS asli di <code>/assets/payments/qris.png</code>.
                   </li>
                 </ul>
               </div>

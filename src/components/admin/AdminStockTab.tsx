@@ -17,6 +17,7 @@ import {
 import type { Product, ProductVariant } from '../../types/index.ts';
 import { formatRp } from './adminUtils.ts';
 import { AdminMobileListCard } from './AdminMobileListCard.tsx';
+import categoryFallback from '../../assets/images/cat_voal_luxury_1791700549401.jpg';
 
 interface StockTabProps {
   products: Product[];
@@ -305,11 +306,11 @@ export const AdminStockTab: React.FC<StockTabProps> = ({
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#FAF9F7] border border-[#E9E5DF] rounded-[8px] overflow-hidden shrink-0">
                             <img
-                              src={product.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'}
+                              src={product.imageUrl || categoryFallback}
                               alt={product.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/src/assets/images/cat_voal_luxury_1791700549401.jpg';
+                                (e.target as HTMLImageElement).src = categoryFallback;
                               }}
                             />
                           </div>

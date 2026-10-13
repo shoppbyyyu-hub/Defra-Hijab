@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import type { Product, Category, ProductVariant } from '../../types/index.ts';
 import { formatRp } from './adminUtils.ts';
+import categoryFallback from '../../assets/images/cat_voal_luxury_1791700549401.jpg';
+import silkFallback from '../../assets/images/product_silk_hijab_1791700562716.jpg';
 
 interface ProductsTabProps {
   products: Product[];
@@ -55,7 +57,7 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
   const [basePrice, setBasePrice] = useState(165000);
   const [discountPrice, setDiscountPrice] = useState<number | undefined>(undefined);
   const [weightGrams, setWeightGrams] = useState(150);
-  const [imageUrl, setImageUrl] = useState('/src/assets/images/cat_voal_luxury_1791700549401.jpg');
+  const [imageUrl, setImageUrl] = useState(categoryFallback);
   const [coverImageChanged, setCoverImageChanged] = useState(false);
   const [uploadingMain, setUploadingMain] = useState(false);
 
@@ -69,8 +71,8 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
     colorHex: string;
     images: string[];
   }>>([
-    { color: 'Rose Dust', colorHex: '#B88770', images: ['/src/assets/images/cat_voal_luxury_1791700549401.jpg'] },
-    { color: 'Warm Almond', colorHex: '#D4B996', images: ['/src/assets/images/product_silk_hijab_1791700562716.jpg'] }
+    { color: 'Rose Dust', colorHex: '#B88770', images: [categoryFallback] },
+    { color: 'Warm Almond', colorHex: '#D4B996', images: [silkFallback] }
   ]);
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#B88770');
@@ -114,7 +116,7 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
     setBasePrice(165000);
     setDiscountPrice(undefined);
     setWeightGrams(150);
-    setImageUrl('/src/assets/images/cat_voal_luxury_1791700549401.jpg');
+    setImageUrl(categoryFallback);
     setCoverImageChanged(false);
     setSizesList(['115 x 115 cm']);
     setColorsList([]);
@@ -135,7 +137,7 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
     setBasePrice(prod.basePrice);
     setDiscountPrice(prod.discountPrice);
     setWeightGrams(prod.weightGrams || 150);
-    setImageUrl(prod.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg');
+    setImageUrl(prod.imageUrl || categoryFallback);
     setCoverImageChanged(false);
     setSizesList(prod.sizes && prod.sizes.length > 0 ? prod.sizes : ['115 x 115 cm']);
 
@@ -157,7 +159,7 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
       );
     } else {
       setColorsList([
-        { color: 'Rose Dust', colorHex: '#B88770', images: [prod.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'] }
+        { color: 'Rose Dust', colorHex: '#B88770', images: [prod.imageUrl || categoryFallback] }
       ]);
     }
 
@@ -588,11 +590,11 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
                         <div className="flex items-center gap-3">
                           <div className="w-11 h-11 bg-[#FAF9F7] border border-[#E9E5DF] rounded-[10px] overflow-hidden shrink-0">
                             <img
-                              src={p.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'}
+                              src={p.imageUrl || categoryFallback}
                               alt={p.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/src/assets/images/cat_voal_luxury_1791700549401.jpg';
+                                (e.target as HTMLImageElement).src = categoryFallback;
                               }}
                             />
                           </div>
@@ -1188,7 +1190,7 @@ export const AdminProductsTab: React.FC<ProductsTabProps> = ({
                     src={
                       colorsList[previewColorIdx]?.images[0] ||
                       imageUrl ||
-                      '/src/assets/images/cat_voal_luxury_1791700549401.jpg'
+                      categoryFallback
                     }
                     alt="Preview"
                     className="w-full h-full object-cover transition-all"

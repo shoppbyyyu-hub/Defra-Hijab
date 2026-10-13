@@ -12,6 +12,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import type { Category } from '../../types/index.ts';
+import categoryFallback from '../../assets/images/cat_voal_luxury_1791700549401.jpg';
 
 interface CategoriesTabProps {
   categories: Category[];
@@ -32,7 +33,7 @@ export const AdminCategoriesTab: React.FC<CategoriesTabProps> = ({
   // Form State
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [imageUrl, setImageUrl] = useState('/src/assets/images/cat_voal_luxury_1791700549401.jpg');
+  const [imageUrl, setImageUrl] = useState(categoryFallback);
   const [sortOrder, setSortOrder] = useState(categories.length + 1);
   const [isActive, setIsActive] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -244,11 +245,11 @@ export const AdminCategoriesTab: React.FC<CategoriesTabProps> = ({
             {/* Landscape 2:1 Photo Banner */}
             <div className="relative w-full aspect-[2/1] bg-[#FAF9F7] overflow-hidden">
               <img
-                src={cat.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'}
+                src={cat.imageUrl || categoryFallback}
                 alt={cat.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/src/assets/images/cat_voal_luxury_1791700549401.jpg';
+                  (e.target as HTMLImageElement).src = categoryFallback;
                 }}
               />
               <div className="absolute top-3 left-3 bg-[#24221F]/80 backdrop-blur-xs text-white text-[11px] font-sans px-2.5 py-0.5 rounded-[999px]">

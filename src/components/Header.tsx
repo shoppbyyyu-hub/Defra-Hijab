@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenSearch, catego
               className="pointer-events-auto flex items-center justify-center focus-visible:outline-2 focus-visible:outline-[#282420]"
             >
               <img
-                src="/public/assets/brand/defra-logo.svg"
+                src="/assets/brand/defra-logo.svg"
                 alt="Defra Hijab Logo"
                 className="w-16 h-12 lg:w-20 lg:h-14 object-contain"
               />

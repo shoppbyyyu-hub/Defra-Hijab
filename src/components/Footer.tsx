@@ -15,7 +15,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, whatsappNumber = '62
           <div>
             <div className="flex items-center gap-2 mb-3">
               <img
-                src="/public/assets/brand/defra-logo.svg"
+                src="/assets/brand/defra-logo.svg"
                 alt="Defra Hijab"
                 className="w-14 h-10 object-contain"
               />

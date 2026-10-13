@@ -1,5 +1,7 @@
 import React from 'react';
 import type { HeroBanner } from '../types/index.ts';
+import desktopFallback from '../assets/images/hero_defra_hijab_1791700536382.jpg';
+import mobileFallback from '../assets/images/hero_mobile_portrait_1791733702637.jpg';
 
 interface HeroProps {
   banner?: HeroBanner;
@@ -7,8 +9,8 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({ banner, loading = false }) => {
-  const desktopImg = banner?.desktopImageUrl || '/src/assets/images/hero_defra_hijab_1791700536382.jpg';
-  const mobileImg = banner?.mobileImageUrl || '/src/assets/images/hero_mobile_portrait_1791733702637.jpg';
+  const desktopImg = banner?.desktopImageUrl || desktopFallback;
+  const mobileImg = banner?.mobileImageUrl || mobileFallback;
   const focalX = banner?.focalX ?? 50;
   const focalY = banner?.focalY ?? 50;
   const mobileFocalX = banner?.mobileFocalX ?? (banner?.focalX ?? 50);

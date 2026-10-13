@@ -48,7 +48,7 @@ export const AdminLoginView: React.FC<AdminLoginViewProps> = ({ onLoginSuccess }
         <div className="text-center mb-6">
           <div className="w-12 h-10 mx-auto mb-3 flex items-center justify-center">
             <img
-              src="/public/assets/brand/defra-logo.svg"
+              src="/assets/brand/defra-logo.svg"
               alt="Defra Hijab Logo"
               className="w-full h-full object-contain"
             />

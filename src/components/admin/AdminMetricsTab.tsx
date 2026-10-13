@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { formatRp, formatRpShort } from './adminUtils.ts';
 import { SalesTrendChart, OrderCompositionDonut } from './AdminCharts.tsx';
+import categoryFallback from '../../assets/images/cat_voal_luxury_1791700549401.jpg';
 
 interface MetricsTabProps {
   dashboardData: any;
@@ -558,11 +559,11 @@ export const AdminMetricsTab: React.FC<MetricsTabProps> = ({
                         <div className="flex items-center gap-2.5 truncate">
                           <div className="w-9 h-9 bg-[#F6F5F2] border border-[#E9E5DF] rounded-[8px] overflow-hidden shrink-0">
                             <img
-                              src={p.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'}
+                              src={p.imageUrl || categoryFallback}
                               alt={p.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/src/assets/images/cat_voal_luxury_1791700549401.jpg';
+                                (e.target as HTMLImageElement).src = categoryFallback;
                               }}
                             />
                           </div>
@@ -622,11 +623,11 @@ export const AdminMetricsTab: React.FC<MetricsTabProps> = ({
                         <div className="flex items-center gap-2.5 truncate">
                           <div className="w-9 h-9 bg-[#F6F5F2] border border-[#E9E5DF] rounded-[8px] overflow-hidden shrink-0">
                             <img
-                              src={p.imageUrl || '/src/assets/images/cat_voal_luxury_1791700549401.jpg'}
+                              src={p.imageUrl || categoryFallback}
                               alt={p.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/src/assets/images/cat_voal_luxury_1791700549401.jpg';
+                                (e.target as HTMLImageElement).src = categoryFallback;
                               }}
                             />
                           </div>
