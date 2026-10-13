@@ -1,0 +1,6 @@
+{
+  "name": "Defra Hijab",
+  "description": "Storefront fashion hijab Indonesia dengan kurasi material premium, koleksi voal, pashmina, dan checkout aman.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
