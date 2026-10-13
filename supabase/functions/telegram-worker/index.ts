@@ -40,6 +40,29 @@ async function signedProof(payment: any) {
   return result?.signedURL ? `${supabaseUrl}/storage/v1${result.signedURL}` : 'Tidak tersedia';
 }
 
+async function signedReturnProof(proof:any){
+  if(!proof?.storage_path)return null;
+  const bucket=proof.bucket||'return-proofs';
+  const result=await db(`/storage/v1/object/sign/${encodeURIComponent(bucket)}/${proof.storage_path.split('/').map(encodeURIComponent).join('/')}`,
+    {method:'POST',body:JSON.stringify({expiresIn:3600})});
+  return result?.signedURL?`${supabaseUrl}/storage/v1${result.signedURL}`:null;
+}
+
+async function renderReturn(payload:any){
+  const rows=await db(`/rest/v1/return_requests?id=eq.${encodeURIComponent(String(payload.returnId))}&select=return_number,requested_resolution,reason_category,customer_notes,orders(order_number,customer_name,customer_email,customer_whatsapp,customer_birth_date,address_line,village,subdistrict,city,province,postal_code,voucher_code,subtotal,discount_amount,shipping_fee,total_amount,payment_method),return_items(quantity,order_items(product_name,color_name,size_name,unit_price)),return_proofs(bucket,storage_path)&limit=1`);
+  const claim=rows?.[0];
+  if(!claim)return `Pengajuan Retur Baru — Perlu Ditinjau\n\nNomor retur: ${payload.returnNumber||'-'}\nData pengajuan tidak lagi tersedia.`;
+  const order=Array.isArray(claim.orders)?claim.orders[0]:claim.orders;
+  if(!order)throw new Error('Pesanan retur tidak ditemukan.');
+  const proofUrls=(await Promise.all((claim.return_proofs||[]).map(signedReturnProof))).filter(Boolean);
+  const items=(claim.return_items||[]).map((item:any)=>{const ordered=Array.isArray(item.order_items)?item.order_items[0]:item.order_items;return `• ${ordered?.product_name||'-'} — ${ordered?.color_name||'-'} / ${ordered?.size_name||'-'} × ${Number(item.quantity)} (${rupiah(Number(ordered?.unit_price||0)*Number(item.quantity))})`;}).join('\n')||'• Tidak ada rincian barang';
+  const reasons:any={WRONG_ITEM:'Barang yang diterima tidak sesuai',DAMAGED:'Barang rusak',DEFECTIVE:'Cacat jahitan atau kain'};
+  const resolutions:any={REFUND:'Pengembalian dana',REPLACEMENT:'Penggantian produk'};
+  const proofs=proofUrls.length?proofUrls.map((url:string,index:number)=>`${proofUrls.length>1?`${index+1}. `:''}${url}`).join('\n'):'Tidak dilampirkan';
+  const address=[order.address_line,order.village,order.subdistrict,order.city,order.province,order.postal_code].filter(Boolean).join(', ');
+  return `Pengajuan Retur Baru — Perlu Ditinjau\n\nNomor retur: ${claim.return_number}\nNomor pesanan: ${order.order_number}\nNama: ${order.customer_name}\nEmail: ${order.customer_email}\nWhatsApp: ${order.customer_whatsapp}\nTanggal lahir: ${order.customer_birth_date}\nAlamat: ${address}\n\n${items}\n\nVoucher: ${order.voucher_code||'-'}\nSubtotal: ${rupiah(order.subtotal)}\nDiskon: ${rupiah(order.discount_amount)}\nOngkir: ${rupiah(order.shipping_fee)}\nTotal: ${rupiah(order.total_amount)}\nMetode: ${order.payment_method}\n\nAlasan retur: ${reasons[claim.reason_category]||claim.reason_category}\nSolusi yang diminta: ${resolutions[claim.requested_resolution]||claim.requested_resolution}\nCatatan: ${claim.customer_notes}\nBukti retur (tautan sementara): ${proofs}`;
+}
+
 async function render(job: any) {
   const payload = job.payload || {};
   if (job.event_type === 'LOW_STOCK') {
@@ -54,7 +77,7 @@ async function render(job: any) {
       : 'Tidak ada batch bersisa';
     return `${payload.state === 'OUT' ? 'Stok Habis' : 'Stok Menipis'}\n\nNama Produk : ${productName ?? '-'}${!productName && sku ? `\nSKU: ${sku}` : ''}\nWarna : ${payload.color ?? fallback?.color ?? '-'}\nUkuran : ${payload.size ?? fallback?.size ?? '-'}\nStok Tersedia : ${payload.available ?? '-'} pcs\nBatch : ${batchText}`;
   }
-  if (job.event_type === 'NEW_RETURN') return `Pengajuan retur baru\nNomor retur: ${payload.returnNumber}`;
+  if (job.event_type === 'NEW_RETURN') return renderReturn(payload);
   if (job.event_type === 'NET_PROFIT_NEGATIVE') return `Peringatan keuntungan bersih bulan berjalan negatif: ${rupiah(payload.netProfit)}`;
   if (job.event_type === 'NEW_ORDER') {
     const rows = await db(`/rest/v1/orders?id=eq.${encodeURIComponent(String(payload.orderId))}&select=*,order_items(*),payments(*)&limit=1`);
